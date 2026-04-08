@@ -1,0 +1,81 @@
+import os
+from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage, AIMessage
+
+def main():
+    print("Loading environment...")
+    load_dotenv()
+
+    # ==========================================
+    # API KEY CHECK
+    # ==========================================
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if api_key:
+        os.environ["GOOGLE_API_KEY"] = api_key.strip()
+    else:
+        print("\n⚠️ Google API Key not found!")
+        manual_key = input("Paste your free Google API key here: ").strip()
+        os.environ["GOOGLE_API_KEY"] = manual_key
+
+    # ==========================================
+    # QUOTA HACK: DOWNGRADE TO 1.5 FLASH
+    # ==========================================
+    print("Waking up the lightweight AI...")
+    # 1.5 Flash gives you ~1,500 free requests per day instead of 20!
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
+
+    # ==========================================
+    # SETUP PROMPT & MANUAL MEMORY
+    # ==========================================
+    # You can change the "system" message to make the AI act however you want
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a grumpy but brilliant pirate who knows a lot about programming. Keep answers short and use pirate slang."),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}")
+    ])
+
+    # Connect the prompt and the LLM (This is a simple Chain, NOT an Agent)
+    chain = prompt | llm
+    
+    # We will manually store the memory here
+    chat_history = []
+
+    # ==========================================
+    # CONSOLE INTERFACE
+    # ==========================================
+    print("\n" + "="*50)
+    print("Basic Pirate Chatbot Initialized (Low Quota Mode)!")
+    print("Type 'exit' to stop.")
+    print("="*50 + "\n")
+
+    while True:
+        user_input = input("You: ")
+        
+        if user_input.lower() in ['exit', 'quit']:
+            print("Shutting down the bot. Goodbye!")
+            break
+        if not user_input.strip():
+            continue
+
+        try:
+            # Send exactly ONE request to the API
+            response = chain.invoke({
+                "input": user_input,
+                "chat_history": chat_history
+            })
+            
+            print(f"\nPirate Bot: {response.content}\n")
+            
+            # Save the conversation to memory so it remembers your next question
+            chat_history.extend([
+                HumanMessage(content=user_input),
+                AIMessage(content=response.content)
+            ])
+            
+        except Exception as e:
+            print(f"\nAn error occurred: {e}\n")
+
+if __name__ == "__main__":
+    main()

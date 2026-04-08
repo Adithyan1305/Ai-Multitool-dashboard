@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Multi-Tool Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        
+        /* Tabs styling */
+        .tabs { display: flex; justify-content: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .tab { padding: 10px 20px; cursor: pointer; font-weight: bold; color: #666; border-bottom: 3px solid transparent; }
+        .tab.active { color: #007bff; border-bottom: 3px solid #007bff; }
+        
+        /* Content sections */
+        .panel { display: none; }
+        .panel.active { display: block; }
+        
+        /* Inputs and Buttons */
+        input[type="text"] { width: 70%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        
+        /* Output Box */
+        .output-box { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px; min-height: 50px; white-space: pre-wrap;}
+        .loading { color: #888; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>AI Multi-Tool Dashboard</h1>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('weather-panel', this)">🌤️ Weather</div>
+        <div class="tab" onclick="showTab('math-panel', this)">🧮 Math</div>
+        <div class="tab" onclick="showTab('research-panel', this)">📧 Automate Workflow</div>
+    </div>
+
+    <div id="weather-panel" class="panel active">
+        <h3>Check the Weather</h3>
+        <input type="text" id="weather-input" placeholder="Enter a city (e.g., Chennai)">
+        <button onclick="callAPI('/api/weather', 'weather-input', 'weather-output', 'location')">Check</button>
+        <div id="weather-output" class="output-box">Results will appear here...</div>
+    </div>
+
+    <div id="math-panel" class="panel">
+        <h3>Math Calculator (Agent)</h3>
+        <input type="text" id="math-input" placeholder="e.g., What is the square root of 841?">
+        <button onclick="callAPI('/api/math', 'math-input', 'math-output', 'query')">Calculate</button>
+        <div id="math-output" class="output-box">Results will appear here...</div>
+    </div>
+
+    <div id="research-panel" class="panel">
+        <h3>Workflow: Research ➔ Summarize ➔ Draft Email</h3>
+        <input type="text" id="research-input" placeholder="Enter a topic (e.g., The Apollo 11 moon landing)">
+        <button onclick="callWorkflow()">Run Automation</button>
+        <div id="research-output" class="output-box">Results will appear here...</div>
+    </div>
+</div>
+
+<script>
+    // Handles switching between tabs
+    function showTab(panelId, tabElement) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(panelId).classList.add('active');
+        tabElement.classList.add('active');
+    }
+
+    // Generic function for Math and Weather APIs
+    async function callAPI(endpoint, inputId, outputId, paramName) {
+        const inputVal = document.getElementById(inputId).value;
+        const outputDiv = document.getElementById(outputId);
+        
+        if (!inputVal) return alert("Please enter a value!");
+        outputDiv.innerHTML = '<span class="loading">Running Agent... please wait...</span>';
+
+        const bodyData = {};
+        bodyData[paramName] = inputVal;
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyData)
+            });
+            const data = await response.json();
+            
+            if (data.error) outputDiv.innerHTML = "❌ Error: " + data.error;
+            else outputDiv.innerHTML = "✅ " + data.result;
+        } catch (e) {
+            outputDiv.innerHTML = "❌ Connection failed.";
+        }
+    }
+
+    // Specialized function for the Multi-Step Workflow
+    async function callWorkflow() {
+        const inputVal = document.getElementById('research-input').value;
+        const outputDiv = document.getElementById('research-output');
+        
+        if (!inputVal) return alert("Please enter a topic!");
+        outputDiv.innerHTML = '<span class="loading">Step 1: Researching...<br>Step 2: Summarizing...<br>Step 3: Drafting Email...<br>Please wait...</span>';
+
+        try {
+            const response = await fetch('/api/research', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: inputVal })
+            });
+            const data = await response.json();
+            
+            if (data.error) {
+                outputDiv.innerHTML = "❌ Error: " + data.error;
+            } else {
+                outputDiv.innerHTML = "<strong>📊 SUMMARY:</strong>\n" + data.summary + "\n\n<strong>📧 EMAIL DRAFT:</strong>\n" + data.email;
+            }
+        } catch (e) {
+            outputDiv.innerHTML = "❌ Connection failed.";
+        }
+    }
+</script>
+
+</body>
+</html>
